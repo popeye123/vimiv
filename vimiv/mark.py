@@ -3,8 +3,10 @@
 
 import os
 
+from vimiv.app_component import AppComponent
 
-class Mark(object):
+
+class Mark(AppComponent):
     """Handle marking of images.
 
     Attributes:
@@ -14,6 +16,7 @@ class Mark(object):
     """
 
     def __init__(self, app, settings):
+        super().__init__(app)
         self.app = app
         self.marked = []
         self.marked_bak = []

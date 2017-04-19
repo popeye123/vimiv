@@ -5,8 +5,11 @@ import os
 
 from gi.repository import Gdk, GLib, Gtk
 
+from vimiv.app_component import AppComponent
+from vimiv.commandline import CommandLine
 
-class Statusbar(object):
+
+class Statusbar(AppComponent):
     """Create the statusbar and handle all events for it.
 
     Attributes:
@@ -28,7 +31,7 @@ class Statusbar(object):
     """
 
     def __init__(self, app, settings):
-        self.app = app
+        super().__init__(app)
         general = settings["GENERAL"]
 
         # Default values
@@ -225,5 +228,5 @@ class Statusbar(object):
 
     def clear_status(self):
         """Clear num_str, search and error messages from the statusbar."""
-        self.app["commandline"].reset_search(leaving=False)
+        self.get_component(CommandLine).reset_search(leaving=False)
         self.app["eventhandler"].num_clear()

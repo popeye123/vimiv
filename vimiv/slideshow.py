@@ -2,10 +2,12 @@
 """Slideshow for vimiv."""
 
 from gi.repository import GLib
+
+from vimiv.app_component import AppComponent
 from vimiv.helpers import get_float_from_str
 
 
-class Slideshow(object):
+class Slideshow(AppComponent):
     """Handle everything related to slideshow for vimiv.
 
     Attributes:
@@ -26,7 +28,7 @@ class Slideshow(object):
             app: The main vimiv application to interact with.
             settings: Settings from configfiles to use.
         """
-        self.app = app
+        super().__init__(app)
         general = settings["GENERAL"]
 
         self.at_start = general["start_slideshow"]

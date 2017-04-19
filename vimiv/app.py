@@ -5,8 +5,11 @@ import os
 import sys
 import tempfile
 from time import time
+from typing import TypeVar
 
 from gi.repository import Gdk, Gio, GLib, Gtk
+
+from vimiv.app_component import AppComponent
 from vimiv.commandline import CommandLine
 from vimiv.commands import Commands
 from vimiv.completions import Completion
@@ -24,6 +27,8 @@ from vimiv.statusbar import Statusbar
 from vimiv.tags import TagHandler
 from vimiv.thumbnail import Thumbnail
 from vimiv.window import Window
+
+GenericType = TypeVar('GenericType')
 
 
 class Vimiv(Gtk.Application):
@@ -131,7 +136,7 @@ class Vimiv(Gtk.Application):
             self.debug = True
         # If the version option is given, print version and exit 0
         if options.contains("version"):
-            information = Information()
+            information = Information(self)
             print(information.get_version())
             return 0
         # Temp basedir removes all current settings and sets them to default
@@ -224,24 +229,79 @@ class Vimiv(Gtk.Application):
 
     def init_widgets(self):
         """Create all the other widgets and add them to the class."""
-        self["eventhandler"] = KeyHandler(self, self.settings)
-        self["commandline"] = CommandLine(self, self.settings)
-        self["tags"] = TagHandler(self)
-        self["mark"] = Mark(self, self.settings)
-        self["fileextras"] = FileExtras(self)
-        self["statusbar"] = Statusbar(self, self.settings)
-        self["completions"] = Completion(self)
-        self["slideshow"] = Slideshow(self, self.settings)
-        self["image"] = Image(self, self.settings)
-        self["library"] = Library(self, self.settings)
-        self["thumbnail"] = Thumbnail(self, self.settings)
-        self["manipulate"] = Manipulate(self, self.settings)
-        self["information"] = Information()
-        self["window"] = Window(self, self.settings)
-        self["commands"] = Commands(self, self.settings).commands
+        # pylint: disable=too-many-locals
+        keyhandler = KeyHandler(self, self.settings)
+        self["eventhandler"] = keyhandler
+        self.register_component(keyhandler)
+
+        cmdline = CommandLine(self, self.settings)
+        self["commandline"] = cmdline
+        self.register_component(cmdline)
+
+        taghandler = TagHandler(self)
+        self["tags"] = taghandler
+        self.register_component(taghandler)
+
+        mark = Mark(self, self.settings)
+        self["mark"] = mark
+        self.register_component(mark)
+
+        fileextras = FileExtras(self)
+        self["fileextras"] = fileextras
+        self.register_component(fileextras)
+
+        statbar = Statusbar(self, self.settings)
+        self["statusbar"] = statbar
+        self.register_component(statbar)
+
+        completions = Completion(self)
+        self["completions"] = completions
+        self.register_component(completions)
+
+        slideshow = Slideshow(self, self.settings)
+        self["slideshow"] = slideshow
+        self.register_component(slideshow)
+
+        image = Image(self, self.settings)
+        self["image"] = image
+        self.register_component(image)
+
+        library = Library(self, self.settings)
+        self["library"] = library
+        self.register_component(library)
+
+        thumbnail = Thumbnail(self, self.settings)
+        self["thumbnail"] = thumbnail
+        self.register_component(thumbnail)
+
+        manipulate = Manipulate(self, self.settings)
+        self["manipulate"] = manipulate
+        self.register_component(manipulate)
+
+        information = Information(self)
+        self["information"] = information
+        self.register_component(information)
+
+        window = Window(self, self.settings)
+        self["window"] = window
+        self.register_component(window)
+
+        commands = Commands(self, self.settings).commands
+        self["commands"] = commands
+        self.register_component(commands)
+
+        log = Log(self)
+        self["log"] = log
+        self.register_component(log)
+
         # Generate completions as soon as commands exist
-        self["completions"].generate_commandlist()
-        self["log"] = Log(self)
+        completions.generate_commandlist()
+
+    def get_component(self, component_type: GenericType) -> GenericType:
+        return self[component_type]
+
+    def register_component(self, component: AppComponent):
+        self[type(component)] = component
 
     def create_window_structure(self):
         """Generate the structure of all the widgets and add it to the window.
@@ -377,6 +437,7 @@ class Vimiv(Gtk.Application):
             if short:
                 short = ord(short)
             self.add_main_option(name, short, flags, arg, help_str, value)
+
         add_option("bar", "b", "Display statusbar")
         add_option("no-bar", "B", "Hide statusbar")
         add_option("fullscreen", "f", "Start fullscreen")

@@ -8,11 +8,13 @@ from subprocess import PIPE, Popen
 from threading import Thread
 
 from gi.repository import GLib, Gtk
+
+from vimiv.app_component import AppComponent
 from vimiv.fileactions import populate
 from vimiv.helpers import read_file, error_message
 
 
-class CommandLine(object):
+class CommandLine(AppComponent):
     """Commandline of vimiv.
 
     Attributes:
@@ -36,7 +38,7 @@ class CommandLine(object):
             app: The main vimiv application to interact with.
             settings: Settings from configfiles to use.
         """
-        self.app = app
+        super().__init__(app)
         general = settings["GENERAL"]
 
         # Command line

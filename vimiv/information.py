@@ -7,8 +7,10 @@ possibility to display the licence.
 
 from gi.repository import GLib, Gtk
 
+from vimiv.app_component import AppComponent
 
-class Information():
+
+class Information(AppComponent):
     """Class containing information on vimiv."""
 
     def get_version(self):

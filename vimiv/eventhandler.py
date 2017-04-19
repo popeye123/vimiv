@@ -2,11 +2,15 @@
 """Handles the keyboard for vimiv."""
 
 from gi.repository import Gdk, GLib
+from vimiv.statusbar import Statusbar
+from vimiv.commandline import CommandLine
+from vimiv.log import Log
+from vimiv.app_component import AppComponent
 from vimiv.configparser import parse_keys
 from vimiv.helpers import get_float_from_str
 
 
-class KeyHandler(object):
+class KeyHandler(AppComponent):
     """Handle key press for vimiv invoking the correct commands.
 
     Attributes:
@@ -24,11 +28,11 @@ class KeyHandler(object):
             settings: Settings from configfiles to use.
         """
         # Add events to vimiv
-        self.app = app
+        super().__init__(app)
         # Settings
         self.num_str = ""
         self.timer_id = 0
-        self.keys = parse_keys(running_tests=self.app.running_tests)
+        self.keys = parse_keys(running_tests=app.running_tests)
 
     def run(self, widget, event, widget_name):
         """Run the correct function per keypress.
@@ -72,9 +76,9 @@ class KeyHandler(object):
             keybinding = keys[keyname]
             # Write keybinding and key to log in debug mode
             if self.app.debug:
-                self.app["log"].write_message("key",
-                                              keyname + ": " + keybinding)
-            self.app["commandline"].run_command(keybinding, keyname)
+                log = self.get_component(Log)
+                log.write_message("key", keyname + ": " + keybinding)
+            self.get_component(CommandLine).run_command(keybinding, keyname)
             return True  # Deactivates default bindings
         # Activate default keybindings
         else:
@@ -94,8 +98,9 @@ class KeyHandler(object):
         self.num_str += num
         # Write number to log file in debug mode
         if self.app.debug:
-            self.app["log"].write_message("number", num + "->" + self.num_str)
-        self.app["statusbar"].update_info()
+            log = self.get_component(Log)
+            log.write_message("number", num + "->" + self.num_str)
+        self.get_component(Statusbar).update_info()
 
     def num_clear(self):
         """Clear num_str."""
@@ -104,11 +109,11 @@ class KeyHandler(object):
             GLib.source_remove(self.timer_id)
         # Write number cleared to log file in debug mode
         if self.app.debug and self.num_str:
-            self.app["log"].write_message("number", "cleared")
+            self.get_component(Log).write_message("number", "cleared")
         self.timer_id = 0
         # Reset
         self.num_str = ""
-        self.app["statusbar"].update_info()
+        self.get_component(Statusbar).update_info()
 
     def num_receive(self, number=1, get_float=False):
         """Receive self.num_str and clear it.

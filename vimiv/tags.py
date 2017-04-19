@@ -4,11 +4,13 @@
 import os
 
 from gi.repository import Gtk, GLib
+
+from vimiv.app_component import AppComponent
 from vimiv.fileactions import populate
 from vimiv.helpers import read_file, error_message
 
 
-class TagHandler(object):
+class TagHandler(AppComponent):
     """Handle tags.
 
     Attributes:
@@ -23,6 +25,7 @@ class TagHandler(object):
         Args:
             app: The main vimiv application to interact with.
         """
+        super().__init__(app)
         self.app = app
         # Create tags directory
         self.directory = os.path.join(GLib.get_user_data_dir(), "vimiv", "Tags")

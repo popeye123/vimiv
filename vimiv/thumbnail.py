@@ -5,11 +5,14 @@ import os
 from math import floor
 
 from gi.repository import GdkPixbuf, GLib, Gtk
+
+from vimiv.app_component import AppComponent
 from vimiv.fileactions import populate
+from vimiv.library import Library
 from vimiv.thumbnail_manager import ThumbnailManager
 
 
-class Thumbnail(object):
+class Thumbnail(AppComponent):
     """Thumbnail class for vimiv.
 
     Includes the iconview with the thumnbails and all actions that apply to it.
@@ -36,7 +39,7 @@ class Thumbnail(object):
             app: The main application class to interact with.
             settings: Settings from configfiles to use.
         """
-        self.app = app
+        super().__init__(app)
         general = settings["GENERAL"]
 
         # Settings
@@ -44,7 +47,7 @@ class Thumbnail(object):
         self.padding = general["thumb_padding"]
         self.timer_id = GLib.Timeout
         self.elements = []
-        self.markup = self.app["library"].markup.replace("fore", "back")
+        self.markup = self.get_component(Library).markup.replace("fore", "back")
 
         zoom_level = general["default_thumbsize"]
         self.zoom_levels = [(64, 64), (128, 128), (256, 256), (512, 512)]

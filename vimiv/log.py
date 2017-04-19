@@ -6,9 +6,11 @@ import sys
 import time
 
 from gi.repository import Gtk, GLib
+from vimiv.information import Information
+from vimiv.app_component import AppComponent
 
 
-class Log():
+class Log(AppComponent):
     """Log file handler.
 
     Attributes:
@@ -21,6 +23,7 @@ class Log():
         Args:
             app: The main vimiv application to interact with.
         """
+        super().__init__(app)
         datadir = os.path.join(GLib.get_user_data_dir(), "vimiv")
         os.makedirs(datadir, exist_ok=True)
         self.filename = os.path.join(datadir, "vimiv.log")
@@ -35,7 +38,8 @@ class Log():
                     + "\n")
         self.write_separator()
         # Header containing version and Gtk version
-        self.write_message("Version", app["information"].get_version())
+        information = self.get_component(Information)
+        self.write_message("Version", information.get_version())
         self.write_message("Python", sys.version.split()[0])
         gtk_version = str(Gtk.get_major_version()) + "." \
             + str(Gtk.get_minor_version()) + "." \

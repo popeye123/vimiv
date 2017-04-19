@@ -4,11 +4,13 @@
 import os
 
 from gi.repository import Gdk, Gtk
+
+from vimiv.app_component import AppComponent
 from vimiv.fileactions import is_image, populate
 from vimiv.helpers import listdir_wrapper, sizeof_fmt
 
 
-class Library(object):
+class Library(AppComponent):
     """Library of vimiv.
 
     Includes the treeview with the library and all actions that apply to it
@@ -43,7 +45,7 @@ class Library(object):
             app: The main vimiv application to interact with.
             settings: Settings from configfiles to use.
         """
-        self.app = app
+        super().__init__(app)
         library = settings["LIBRARY"]
 
         # Settings
@@ -84,9 +86,9 @@ class Library(object):
         # Handle key events
         self.treeview.add_events(Gdk.EventMask.KEY_PRESS_MASK)
         self.treeview.connect("key_press_event",
-                              self.app["eventhandler"].run, "LIBRARY")
+                              app["eventhandler"].run, "LIBRARY")
         self.treeview.connect("button_press_event",
-                              self.app["eventhandler"].run, "LIBRARY")
+                              app["eventhandler"].run, "LIBRARY")
         # Add the columns
         for i, name in enumerate(["Num", "Name", "Size", "M"]):
             renderer = Gtk.CellRendererText()

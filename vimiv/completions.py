@@ -7,11 +7,13 @@ from itertools import takewhile
 from string import digits
 
 from gi.repository import Gtk
+
+from vimiv.app_component import AppComponent
 from vimiv.fileactions import is_image
 from vimiv.helpers import listdir_wrapper, read_info_from_man
 
 
-class Completion():
+class Completion(AppComponent):
     """Completion for vimiv's commandline.
 
     Attributes:
@@ -31,6 +33,7 @@ class Completion():
         Args:
             app: The main vimiv application to interact with.
         """
+        super().__init__(app)
         self.app = app
         # Create liststore dictionary with the filter used.
         self.liststores = {"internal": [Gtk.ListStore(str, str)],

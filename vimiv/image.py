@@ -4,10 +4,18 @@
 from random import shuffle
 
 from gi.repository import GdkPixbuf, GLib, Gtk
+from vimiv.slideshow import Slideshow
+from vimiv.window import Window
+from vimiv.library import Library
+from vimiv.thumbnail import Thumbnail
+from vimiv.eventhandler import KeyHandler
+from vimiv.manipulate import Manipulate
+from vimiv.statusbar import Statusbar
+from vimiv.app_component import AppComponent
 from vimiv.helpers import get_float_from_str
 
 
-class Image(object):
+class Image(AppComponent):
     """Image class for vimiv.
 
     Includes the scrollable window with the image and all actions that apply
@@ -37,7 +45,7 @@ class Image(object):
 
     def __init__(self, app, settings):
         """Set default values for attributes."""
-        self.app = app
+        super().__init__(app)
         general = settings["GENERAL"]
 
         # Generate window structure
@@ -52,7 +60,7 @@ class Image(object):
         self.scrolled_win.add(self.viewport)
         self.viewport.add(self.image)
         self.scrolled_win.connect("key_press_event",
-                                  self.app["eventhandler"].run, "IMAGE")
+                                  app["eventhandler"].run, "IMAGE")
 
         # Settings
         self.animation_toggled = False
@@ -75,13 +83,12 @@ class Image(object):
         Return:
             0 if no edits were done or force, 1 else.
         """
+        manipulate = self.get_component(Manipulate)
         if force:
-            self.app["manipulate"].manipulations = \
-                {"bri": 1, "con": 1, "sha": 1}
+            manipulate.manipulations = {"bri": 1, "con": 1, "sha": 1}
             return 0
-        elif self.app["manipulate"].manipulations != \
-                {"bri": 1, "con": 1, "sha": 1}:
-            self.app["statusbar"].message(
+        elif manipulate.manipulations != {"bri": 1, "con": 1, "sha": 1}:
+            self.get_component(Statusbar).message(
                 "Image has been edited, add ! to force", "warning")
             return 1
         return 0
@@ -147,7 +154,7 @@ class Image(object):
             self.image.set_from_pixbuf(pixbuf_final)
         # Update the statusbar if required
         if update_info:
-            self.app["statusbar"].update_info()
+            self.get_component(Statusbar).update_info()
 
     def play_gif(self):
         """Run the animation of a gif."""
@@ -178,11 +185,13 @@ class Image(object):
         Return:
             Tuple of available size.
         """
-        size = self.app["window"].get_size()
-        if self.app["library"].grid.is_visible():
-            size = (size[0] - self.app["library"].width, size[1])
-        if not self.app["statusbar"].hidden:
-            size = (size[0], size[1] - self.app["statusbar"].get_bar_height())
+        statusbar = self.get_component(Statusbar)
+
+        size = self.get_component(Window).get_size()
+        if self.get_component(Library).grid.is_visible():
+            size = (size[0] - self.get_component(Library).width, size[1])
+        if not statusbar.hidden:
+            size = (size[0], size[1] - statusbar.get_bar_height())
         return size
 
     def zoom_delta(self, zoom_in=True, step=1):
@@ -192,16 +201,16 @@ class Image(object):
             zoom_in: If True zoom in, else zoom out.
         """
         delta = 0.25
+        statusbar = self.get_component(Statusbar)
         if self.is_anim:
-            self.app["statusbar"].message("Zoom not supported for gif files",
-                                          "warning")
+            statusbar.message("Zoom not supported for gif files", "warning")
         else:
             # Allow user steps
-            step = self.app["eventhandler"].num_receive(step, True)
+            step = self.get_component(KeyHandler).num_receive(step, True)
             if isinstance(step, str):
                 step, err = get_float_from_str(step)
                 if err:
-                    self.app["statusbar"].message(
+                    statusbar.message(
                         "Argument for zoom must be of type float", "error")
                     return
             fallback_zoom = self.zoom_percent
@@ -219,18 +228,18 @@ class Image(object):
             percent: Percentage to zoom to.
             fit: See self.fit_image attribute.
         """
+        statusbar = self.get_component(Statusbar)
         if self.is_anim:
-            self.app["statusbar"].message("Zoom not supported for gif files",
-                                          "warning")
+            statusbar.message("Zoom not supported for gif files", "warning")
             return
         fallback_zoom = self.zoom_percent
         # Catch user zooms
-        percent = self.app["eventhandler"].num_receive(percent, True)
+        percent = self.get_component(KeyHandler).num_receive(percent, True)
         # Given from commandline
         if isinstance(percent, str):
             percent, err = get_float_from_str(percent)
             if err:
-                self.app["statusbar"].message(
+                statusbar.message(
                     "Argument for zoom must be of type float", "error")
                 return
         self.imsize = self.get_available_size()
@@ -251,21 +260,22 @@ class Image(object):
             fallback_zoom: Zoom percentage to fall back to if the zoom
                 percentage is unreasonable.
         """
+        window = self.get_component(Window)
         orig_width = self.pixbuf_original.get_width()
         orig_height = self.pixbuf_original.get_height()
         new_width = orig_width * self.zoom_percent
         new_height = orig_height * self.zoom_percent
         min_width = max(16, orig_width * 0.05)
         min_height = max(16, orig_height * 0.05)
-        max_width = min(self.app["window"].get_size()[0] * 10,
+        max_width = min(window.get_size()[0] * 10,
                         self.pixbuf_original.get_width() * 20)
-        max_height = min(self.app["window"].get_size()[1] * 10,
+        max_height = min(window.get_size()[1] * 10,
                          self.pixbuf_original.get_height() * 20)
         # Image too small or too large
         if new_height < min_height or new_width < min_width \
                 or new_height > max_height or new_width > max_width:
             message = "Image cannot be zoomed this far"
-            self.app["statusbar"].message(message, "warning")
+            self.get_component(Statusbar).message(message, "warning")
             self.zoom_percent = fallback_zoom
         else:
             self.update(update_gif=False)
@@ -287,7 +297,7 @@ class Image(object):
         Args:
             direction: Direction to scroll in.
         """
-        steps = self.app["eventhandler"].num_receive()
+        steps = self.get_component(KeyHandler).num_receive()
         scale = self.zoom_percent / self.get_zoom_percent_to_fit() * 2
         h_adj = Gtk.Scrollable.get_hadjustment(self.viewport)
         h_size = h_adj.get_upper() - h_adj.get_lower() - self.imsize[0]
@@ -326,14 +336,14 @@ class Image(object):
             force: If True, move regardless of editing image.
         """
         # Check if an image is opened or if it has been edited
-        if not self.app.paths or self.app["thumbnail"].toggled or \
+        if not self.app.paths or self.get_component(Thumbnail).toggled or \
                 self.check_for_edit(force):
             return
         # Run the simple manipulations
-        self.app["manipulate"].run_simple_manipulations()
+        self.get_component(Manipulate).run_simple_manipulations()
         # Check for prepended numbers and direction
         if key:
-            delta *= self.app["eventhandler"].num_receive()
+            delta *= self.get_component(KeyHandler).num_receive()
         if not forward:
             delta *= -1
         self.app.index = (self.app.index + delta) % len(self.app.paths)
@@ -347,13 +357,15 @@ class Image(object):
         self.load_image()
 
         # Info if slideshow returns to beginning
-        if self.app["slideshow"].running:
-            if self.app.index is self.app["slideshow"].start_index:
+        slideshow = self.get_component(Slideshow)
+        statusbar = self.get_component(Statusbar)
+        if slideshow.running:
+            if self.app.index is slideshow.start_index:
                 message = "Back at beginning of slideshow"
-                self.app["statusbar"].lock = True
-                self.app["statusbar"].message(message, "info")
+                statusbar.lock = True
+                statusbar.message(message, "info")
             else:
-                self.app["statusbar"].lock = False
+                statusbar.lock = False
 
         return True  # for the slideshow
 
@@ -379,7 +391,8 @@ class Image(object):
         except (PermissionError, FileNotFoundError):
             self.app.paths.remove(path)
             self.move_pos(False)
-            self.app["statusbar"].message("File not accessible", "error")
+            self.get_component(Statusbar).message("File not accessible",
+                                                  "error")
 
     def move_pos(self, forward=True, force=False):
         """Move to specific position in paths.
@@ -388,6 +401,9 @@ class Image(object):
             forward: If True move forwards. Else move backwards.
             force: If True, move regardless of editing image.
         """
+        eventhandler = self.get_component(KeyHandler)
+        thumbnail = self.get_component(Thumbnail)
+
         # Check if image has been edited
         if self.check_for_edit(force):
             return
@@ -395,18 +411,19 @@ class Image(object):
         current = self.app.get_pos(force_widget="im")
         # Move to definition by keys or end/beg
         if forward:
-            pos = self.app["eventhandler"].num_receive(max_pos)
+            pos = eventhandler.num_receive(max_pos)
         else:
-            pos = self.app["eventhandler"].num_receive()
+            pos = eventhandler.num_receive()
         # Catch range
         if pos < 0 or pos > max_pos:
-            self.app["statusbar"].message("Unsupported index", "warning")
+            self.get_component(Statusbar).message("Unsupported index",
+                                                  "warning")
             return False
         # Do the maths and move
         dif = pos - current - 1
-        if self.app["thumbnail"].toggled:
+        if thumbnail.toggled:
             pos -= 1
-            self.app["thumbnail"].move_to_pos(pos)
+            thumbnail.move_to_pos(pos)
         else:
             self.move_index(True, False, dif)
         return True
@@ -421,6 +438,6 @@ class Image(object):
 
     def toggle_animation(self):
         """Toggle animation status of Gifs."""
-        if self.app.paths and not self.app["thumbnail"].toggled:
+        if self.app.paths and not self.get_component(Thumbnail).toggled:
             self.animation_toggled = not self.animation_toggled
             self.update()

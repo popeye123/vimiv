@@ -6,6 +6,8 @@ from random import shuffle
 
 from gi.repository import Gdk, GdkPixbuf, Gtk
 from PIL import Image
+
+from vimiv.app_component import AppComponent
 from vimiv.helpers import listdir_wrapper
 
 
@@ -93,7 +95,7 @@ def is_image(filename):
     return bool(GdkPixbuf.Pixbuf.get_file_info(complete_name)[0])
 
 
-class FileExtras(object):
+class FileExtras(AppComponent):
     """Extra fileactions for vimiv."""
 
     def __init__(self, app):
@@ -103,8 +105,8 @@ class FileExtras(object):
             app: The main vimiv class to interact with.
             clipboard: Gtk Clipboard depending on config.
         """
-        self.app = app
-        self.use_primary = self.app.settings["GENERAL"]["copy_to_primary"]
+        super().__init__(app)
+        self.use_primary = app.settings["GENERAL"]["copy_to_primary"]
 
     def format_files(self, string):
         """Format image names in filelist according to a formatstring.

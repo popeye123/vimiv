@@ -1,10 +1,10 @@
 # vim: ft=python fileencoding=utf-8 sw=4 et sts=4
 """Contains all commands and functions for vimiv."""
-
+from vimiv.app_component import AppComponent
 from vimiv.tags import TagHandler
 
 
-class Commands(object):
+class Commands(AppComponent):
     """Create the commands for vimiv."""
 
     # Adding one command per statement is absolutely acceptable
@@ -18,6 +18,7 @@ class Commands(object):
             commands: Dictionary containing all commands with information.
                 See the add_command method.
         """
+        super().__init__(app)
         self.app = app
         self.settings = settings
         self.commands = {}

@@ -7,10 +7,11 @@ from threading import Thread
 from gi.repository import GdkPixbuf, GLib, Gtk
 from PIL import Image, ImageEnhance
 from vimiv import imageactions
+from vimiv.app_component import AppComponent
 from vimiv.trash_manager import TrashManager
 
 
-class Manipulate(object):
+class Manipulate(AppComponent):
     """Manipulate class for vimiv.
 
     Includes the manipulation toolbar, all the actions that apply to it and all
@@ -33,7 +34,7 @@ class Manipulate(object):
             app: The main vimiv application to interact with.
             settings: Settings from configfiles to use.
         """
-        self.app = app
+        super().__init__(app)
 
         # Settings
         self.simple_manipulations = {}
