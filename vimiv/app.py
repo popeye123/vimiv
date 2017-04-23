@@ -195,16 +195,16 @@ class Vimiv(Gtk.Application):
         """
         self.init_widgets()
         self.create_window_structure()
-        app.add_window(self["window"])
+        app.add_window(self[Window])
         # Show everything and then hide whatever needs to be hidden
-        self["window"].show_all()
-        self["manipulate"].scrolled_win.hide()
-        self["commandline"].entry.hide()
-        self["completions"].hide()
+        self[Window].show_all()
+        self[Manipulate].scrolled_win.hide()
+        self[CommandLine].entry.hide()
+        self[Completion].hide()
         # Statusbar depending on setting
-        if self["statusbar"].hidden:
-            self["statusbar"].bar.hide()
-        self["statusbar"].set_separator_height()
+        if self[Statusbar].hidden:
+            self[Statusbar].bar.hide()
+        self[Statusbar].set_separator_height()
         # Try to generate imagelist recursively from the current directory if
         # recursive is given and not paths exist
         if self.settings["GENERAL"]["recursive"] and not self.paths:
@@ -212,20 +212,20 @@ class Vimiv(Gtk.Application):
             self.paths, self.index = populate([os.getcwd()], True, shuffle)
         # Show the image if an imagelist exists
         if self.paths:
-            self["image"].load_image()
+            self[Image].load_image()
             # Show library at the beginning?
-            if not self["library"].show_at_start:
-                self["library"].grid.hide()
-            self["image"].scrolled_win.grab_focus()
+            if not self[Library].show_at_start:
+                self[Library].grid.hide()
+            self[Image].scrolled_win.grab_focus()
             # Start in slideshow mode?
-            if self["slideshow"].at_start:
-                self["slideshow"].toggle()
+            if self[Slideshow].at_start:
+                self[Slideshow].toggle()
         else:
             # Slideshow without paths makes no sense
-            self["slideshow"].running = False
-            self["library"].reload(os.getcwd())
-            if self["library"].expand:
-                self["image"].scrolled_win.hide()
+            self[Slideshow].running = False
+            self[Library].reload(os.getcwd())
+            if self[Library].expand:
+                self[Image].scrolled_win.hide()
 
     def init_widgets(self):
         """Create all the other widgets and add them to the class."""
@@ -295,7 +295,7 @@ class Vimiv(Gtk.Application):
         self.register_component(log)
 
         # Generate completions as soon as commands exist
-        completions.generate_commandlist()
+        self[Completion].generate_commandlist()
 
     def get_component(self, component_type: GenericType) -> GenericType:
         return self[component_type]
@@ -310,15 +310,15 @@ class Vimiv(Gtk.Application):
         Gtk.Overlay(). The commandline is added as overlay.
         """
         main_grid = Gtk.Grid()
-        main_grid.attach(self["library"].grid, 0, 0, 1, 1)
-        main_grid.attach(self["image"].scrolled_win, 1, 0, 1, 1)
-        main_grid.attach(self["manipulate"].scrolled_win, 0, 1, 2, 1)
-        main_grid.attach(self["statusbar"].separator, 0, 2, 2, 1)
+        main_grid.attach(self[Library].grid, 0, 0, 1, 1)
+        main_grid.attach(self[Image].scrolled_win, 1, 0, 1, 1)
+        main_grid.attach(self[Manipulate].scrolled_win, 0, 1, 2, 1)
+        main_grid.attach(self[Statusbar].separator, 0, 2, 2, 1)
 
         overlay_grid = Gtk.Grid()
-        overlay_grid.attach(self["statusbar"].bar, 0, 0, 1, 1)
-        overlay_grid.attach(self["completions"].info, 0, 1, 1, 1)
-        overlay_grid.attach(self["commandline"].entry, 0, 2, 1, 1)
+        overlay_grid.attach(self[Statusbar].bar, 0, 0, 1, 1)
+        overlay_grid.attach(self[Completion].info, 0, 1, 1, 1)
+        overlay_grid.attach(self[CommandLine].entry, 0, 2, 1, 1)
         overlay_grid.set_valign(Gtk.Align.END)
 
         # Make it nice using CSS
@@ -337,7 +337,7 @@ class Vimiv(Gtk.Application):
         overlay = Gtk.Overlay()
         overlay.add(main_grid)
         overlay.add_overlay(overlay_grid)
-        self["window"].add(overlay)
+        self[Window].add(overlay)
 
     def quit_wrapper(self, force=False):
         """Quit the applications, print marked files and save history.
@@ -346,33 +346,33 @@ class Vimiv(Gtk.Application):
             force: If True quit even if an image was edited.
         """
         # Check for running external processes
-        if self["commandline"].running_processes:
+        if self[CommandLine].running_processes:
             if force:
-                for p in self["commandline"].running_processes:
+                for p in self[CommandLine].running_processes:
                     p.kill()
             else:
                 processes = [p.args
-                             for p in self["commandline"].running_processes]
+                             for p in self[CommandLine].running_processes]
                 message = "Running external processes: %s. Add ! to force." \
                           % (", ".join(processes))
-                self["statusbar"].message(message, "warning")
+                self[Statusbar].message(message, "warning")
                 return
         # Check if image has been edited
-        if self["image"].check_for_edit(force):
+        if self[Image].check_for_edit(force):
             return
-        for image in self["mark"].marked:
+        for image in self[Mark].marked:
             print(image)
         # Run remaining rotate and flip threads
-        self["manipulate"].thread_for_simple_manipulations()
+        self[Manipulate].thread_for_simple_manipulations()
         # Save the history
         histfile = os.path.join(GLib.get_user_data_dir(), "vimiv", "history")
         histfile = open(histfile, "w")
-        for cmd in self["commandline"].history:
+        for cmd in self[CommandLine].history:
             cmd += "\n"
             histfile.write(cmd)
         histfile.close()
         # Write to log
-        self["log"].write_message("Exited", "time")
+        self[Log].write_message("Exited", "time")
         # Cleanup tmpdir
         if self.tmpdir:
             self.tmpdir.cleanup()
@@ -391,21 +391,21 @@ class Vimiv(Gtk.Application):
         # Find widget to work on
         if force_widget:
             focused_widget = force_widget
-        elif self["image"].scrolled_win.is_focus() or \
-                self["manipulate"].scrolled_win.is_visible():
+        elif self[Image].scrolled_win.is_focus() or \
+                self[Manipulate].scrolled_win.is_visible():
             focused_widget = "im"
-        elif self["library"].treeview.is_focus():
+        elif self[Library].treeview.is_focus():
             focused_widget = "lib"
-        elif self["thumbnail"].iconview.is_focus():
+        elif self[Thumbnail].iconview.is_focus():
             focused_widget = "thu"
 
         # Get position and name
         if focused_widget != "im":
             if focused_widget == "lib":
-                path = self["library"].treeview.get_cursor()[0]
-                filelist = self["library"].files
+                path = self[Library].treeview.get_cursor()[0]
+                filelist = self[Library].files
             elif focused_widget == "thu":
-                path = self["thumbnail"].iconview.get_cursor()[1]
+                path = self[Thumbnail].iconview.get_cursor()[1]
                 filelist = self.paths
             if path:
                 position = path.get_indices()[0]
